@@ -9,3 +9,22 @@ if isinstance(rep, list):
     rep = rep[0] if rep else ''
 if not isinstance(rep, str):
     rep = str(rep)
+
+
+# Debug sur 1 page
+pdf_path = PDF_DIR / "07310-1000.pdf"
+pages    = pdf_to_pages(pdf_path)
+pages_ok = [p for p in pages if not is_blank(p['image'])]
+
+page = pages_ok[0]
+img  = page['image']
+
+print(f'Type prompt : {type(PROMPT_UNIVERSEL)}')
+print(f'Type image  : {type(img)}')
+
+try:
+    rep = ask_single(PROMPT_UNIVERSEL, img)
+    print(f'Réponse : {rep}')
+except Exception as e:
+    import traceback
+    traceback.print_exc()
