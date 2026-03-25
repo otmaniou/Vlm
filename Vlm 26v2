@@ -355,6 +355,63 @@ def ask_single(prompt: str, image) -> dict:
         torch.cuda.empty_cache()
 
     return {
+        'text':     by  text,
+        'tokens_in':  0,
+        'tokens_out': tok_out,
+        'elapsed':    round(elapsed, 2),
+    }
+
+
+
+
+
+
+
+
+
+
+
+def ask_single(prompt: str, image) -> dict:
+    transform    = build_transform(input_size=448)
+    pixel_values = transform(image).unsqueeze(0).to(torch.float16).to(DEVICE)
+    question     = '<image>' + chr(10) + prompt
+
+    # InternVL3 : generation_config doit être un objet GenerationConfig
+    from transformers import GenerationConfig
+    gen_config = GenerationConfig(
+        max_new_tokens   = MAX_NEW_TOKENS,
+        do_sample        = False,
+        temperature      = 1.0,
+        repetition_penalty = 1.05,
+        eos_token_id     = tokenizer.eos_token_id,
+        pad_token_id     = tokenizer.eos_token_id,
+    )
+
+    t0 = time.time()
+    with torch.no_grad():
+        response = model.chat(
+            tokenizer         = tokenizer,
+            pixel_values      = pixel_values,
+            question          = question,
+            generation_config = gen_config,
+        )
+    elapsed = time.time() - t0
+
+    if isinstance(response, tuple):
+        text = response[0]
+    elif isinstance(response, str):
+        text = response
+    else:
+        text = str(response) if response is not None else ''
+
+    text    = text.replace('```json', '').replace('```', '').strip()
+    tok_out = len(tokenizer.encode(text)) if text else 0
+
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    return {
         'text':       text,
         'tokens_in':  0,
         'tokens_out': tok_out,
