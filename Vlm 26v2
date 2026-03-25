@@ -1,0 +1,11 @@
+rep = model.chat(
+    tokenizer,
+    pixel_values,
+    prompt,
+    generation_config,
+)
+# InternVL3 peut retourner une liste ou une string
+if isinstance(rep, list):
+    rep = rep[0] if rep else ''
+if not isinstance(rep, str):
+    rep = str(rep)
