@@ -225,3 +225,14 @@ print(f'✅ Utilitaires InternVL3 OK')
 print(f'   Device     : {DEVICE}')
 print(f'   Max tokens : {MAX_NEW_TOKENS}')
 
+
+
+print(f'INPUT_DIR : {INPUT_DIR}')
+print(f'PDFs trouvés : {len(pdfs)}')
+# Chercher les PDFs ailleurs
+import subprocess
+r = subprocess.run(['find', '/mnt', '-name', '*.pdf', '-type', 'f'],
+                   capture_output=True, text=True)
+print(r.stdout[:500])
+
+
