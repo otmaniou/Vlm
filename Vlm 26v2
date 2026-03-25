@@ -297,3 +297,18 @@ def ask_single(prompt: str, image) -> dict:
     }
 
 
+
+pdf_test = INPUT_DIR / "07310-108334-10.pdf"
+pages    = pdf_to_pages(pdf_test)
+pages_ok = [p for p in pages if not is_blank(p['image'])]
+
+print(f'{len(pages_ok)} pages non-vides')
+
+for page in pages_ok[:2]:
+    print(f'\n=== Page {page["index"]+1} ===')
+    rep = ask_single(PROMPT_UNIVERSEL, page['image'])
+    print(f'tokens_out : {rep["tokens_out"]}')
+    print(f'texte brut : [{rep["text"]}]')
+    print(f'json parsé : {parse_json(rep["text"])}')
+
+
