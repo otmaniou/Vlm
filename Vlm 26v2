@@ -28,3 +28,39 @@ try:
 except Exception as e:
     import traceback
     traceback.print_exc()
+
+def ask_single(prompt: str, image) -> dict:
+    transform    = build_transform()
+    pixel_values = transform(image).unsqueeze(0).to(torch.float16).to(DEVICE)
+
+    # InternVL3 : prompt simple string, pas de messages dict
+    question = f'<image>\n{prompt}'
+
+    generation_config = dict(
+        max_new_tokens=MAX_NEW_TOKENS,
+        do_sample=False,
+    )
+
+    t0  = time.time()
+    rep = model.chat(
+        tokenizer,
+        pixel_values,
+        question,
+        generation_config,
+    )
+    elapsed = time.time() - t0
+
+    if isinstance(rep, list):
+        rep = rep[0] if rep else ''
+    if not isinstance(rep, str):
+        rep = str(rep)
+
+    tok_out = len(tokenizer.encode(rep))
+
+    return {
+        'text':       rep,
+        'tokens_in':  0,
+        'tokens_out': tok_out,
+        'elapsed':    round(elapsed, 2),
+    }
+
