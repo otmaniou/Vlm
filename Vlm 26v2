@@ -236,3 +236,19 @@ r = subprocess.run(['find', '/mnt', '-name', '*.pdf', '-type', 'f'],
 print(r.stdout[:500])
 
 
+
+# Debug sur le fichier problématique
+pdf_path = INPUT_DIR / "07310-110324-10.pdf"
+pages    = pdf_to_pages(pdf_path)
+pages_ok = [p for p in pages if not is_blank(p['image'])]
+
+print(f'{len(pages)} pages | {len(pages_ok)} non-vides')
+
+# Tester 1 page
+page = pages_ok[0]
+print(f'Test ask_single...')
+rep = ask_single(PROMPT_UNIVERSEL, page['image'])
+print(f'Type rep : {type(rep)}')
+print(f'Rep : {rep}')
+
+
