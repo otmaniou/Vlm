@@ -1,0 +1,62 @@
+from transformers import AutoTokenizer, AutoModel
+import torch
+
+MODEL_PATH = "/domino/edv/modelhub/ModelHub-model-huggingface-OpenGVLab/InternVL3-8B/main"
+
+t0 = time.time()
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_PATH, trust_remote_code=True
+)
+model = AutoModel.from_pretrained(
+    MODEL_PATH,
+    torch_dtype=torch.float16,
+    trust_remote_code=True,
+    low_cpu_mem_usage=True,
+).eval().to(DEVICE)
+
+print(f'✅ InternVL3 chargé en {time.time()-t0:.1f}s')
+
+
+
+
+import torchvision.transforms as T
+from torchvision.transforms.functional import InterpolationMode
+
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD  = (0.229, 0.224, 0.225)
+
+def build_transform(input_size=448):
+    return T.Compose([
+        T.Lambda(lambda img: img.convert('RGB')),
+        T.Resize((input_size, input_size),
+                  interpolation=InterpolationMode.BICUBIC),
+        T.ToTensor(),
+        T.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD)
+    ])
+
+def ask_single(prompt: str, image) -> dict:
+    transform  = build_transform()
+    pixel_values = transform(image).unsqueeze(0).to(torch.float16).to(DEVICE)
+    
+    generation_config = dict(
+        max_new_tokens=MAX_NEW_TOKENS,
+        do_sample=False,
+    )
+    t0  = time.time()
+    rep = model.chat(
+        tokenizer,
+        pixel_values,
+        prompt,
+        generation_config,
+    )
+    elapsed = time.time() - t0
+    
+    # Estimer les tokens
+    tok_out = len(tokenizer.encode(rep))
+    
+    return {
+        'text':       rep,
+        'tokens_in':  0,   # non disponible avec cette API
+        'tokens_out': tok_out,
+        'elapsed':    round(elapsed, 2),
+    }
