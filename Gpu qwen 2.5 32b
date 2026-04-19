@@ -1,0 +1,40 @@
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+import torch
+
+model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    MODEL_PATH,
+    torch_dtype=torch.bfloat16,
+    device_map="auto",          # Répartition auto GPU/CPU
+    trust_remote_code=True,
+    low_cpu_mem_usage=True,     # Charge shard par shard, évite le pic RAM
+)
+processor = AutoProcessor.from_pretrained(
+    MODEL_PATH,
+    trust_remote_code=True
+)
+print("✅ Modèle chargé")
+
+
+
+
+
+
+
+
+
+
+from transformers import BitsAndBytesConfig
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+)
+
+model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+    MODEL_PATH,
+    quantization_config=bnb_config,
+    device_map="auto",
+    trust_remote_code=True,
+    low_cpu_mem_usage=True,
+)
