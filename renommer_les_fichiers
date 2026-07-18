@@ -1,0 +1,99 @@
+from pathlib import Path
+import pandas as pd
+
+# ==========================================================
+# 1. DOSSIERS ET FICHIERS
+# ==========================================================
+
+# Dossier contenant les PDF numérotés : 1.pdf, 2.pdf, etc.
+dossier_pdf = Path("/transferts_in/les_ov_conso/PDF_SEPARES")
+
+# Emplacement du fichier Excel
+fichier_excel = Path("/transferts_in/les_ov_conso/ov_signe.xlsx")
+
+# ==========================================================
+# 2. LECTURE DU FICHIER EXCEL
+# ==========================================================
+
+df = pd.read_excel(fichier_excel, dtype=str)
+
+# Nettoyer les noms des colonnes
+df.columns = df.columns.str.strip()
+
+colonnes_obligatoires = ["Fichier", "nouveau_nom"]
+
+for colonne in colonnes_obligatoires:
+    if colonne not in df.columns:
+        raise ValueError(
+            f"Colonne absente : '{colonne}'. "
+            f"Colonnes trouvées : {list(df.columns)}"
+        )
+
+# ==========================================================
+# 3. RENOMMAGE DES PDF
+# ==========================================================
+
+nombre_renommes = 0
+nombre_erreurs = 0
+
+for index, ligne in df.iterrows():
+
+    ancien_nom = ligne["Fichier"]
+    nouveau_nom = ligne["nouveau_nom"]
+
+    # Ignorer les lignes vides
+    if pd.isna(ancien_nom) or pd.isna(nouveau_nom):
+        print(f"Ligne {index + 2} ignorée : valeur vide")
+        continue
+
+    ancien_nom = str(ancien_nom).strip()
+    nouveau_nom = str(nouveau_nom).strip()
+
+    # Corriger les valeurs Excel comme 1.0
+    if ancien_nom.endswith(".0"):
+        ancien_nom = ancien_nom[:-2]
+
+    # Ajouter l'extension PDF si elle est absente
+    if not ancien_nom.lower().endswith(".pdf"):
+        ancien_nom += ".pdf"
+
+    if not nouveau_nom.lower().endswith(".pdf"):
+        nouveau_nom += ".pdf"
+
+    ancien_fichier = dossier_pdf / ancien_nom
+    nouveau_fichier = dossier_pdf / nouveau_nom
+
+    # Vérifier que le PDF d'origine existe
+    if not ancien_fichier.exists():
+        print(f"Introuvable : {ancien_fichier}")
+        nombre_erreurs += 1
+        continue
+
+    # Ne pas écraser un fichier déjà existant
+    if nouveau_fichier.exists() and ancien_fichier != nouveau_fichier:
+        print(f"Nom déjà utilisé : {nouveau_fichier}")
+        nombre_erreurs += 1
+        continue
+
+    try:
+        ancien_fichier.rename(nouveau_fichier)
+
+        print(
+            f"Renommé : {ancien_fichier.name} "
+            f"→ {nouveau_fichier.name}"
+        )
+
+        nombre_renommes += 1
+
+    except Exception as erreur:
+        print(f"Erreur avec {ancien_fichier.name} : {erreur}")
+        nombre_erreurs += 1
+
+# ==========================================================
+# 4. RÉSUMÉ
+# ==========================================================
+
+print("\n-------------------------------------")
+print(f"PDF renommés : {nombre_renommes}")
+print(f"Erreurs       : {nombre_erreurs}")
+print(f"Dossier       : {dossier_pdf}")
