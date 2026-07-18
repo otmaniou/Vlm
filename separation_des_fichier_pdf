@@ -1,0 +1,51 @@
+from pathlib import Path
+from pypdf import PdfReader, PdfWriter
+
+# Dossier contenant les PDF d'origine
+dossier_entree = Path("/transferts_in/les_ov_conso")
+
+# Sous-dossier dans lequel seront créées les pages séparées
+dossier_sortie = dossier_entree / "PDF_SEPARES"
+
+# Création du dossier de sortie
+dossier_sortie.mkdir(parents=True, exist_ok=True)
+
+# Récupération de tous les PDF du dossier
+liste_pdf = sorted(dossier_entree.glob("*.pdf"))
+
+numero_fichier = 1
+nombre_pages_total = 0
+
+for pdf_source in liste_pdf:
+
+    print(f"\nTraitement du document : {pdf_source.name}")
+
+    try:
+        reader = PdfReader(pdf_source)
+
+        for numero_page, page in enumerate(reader.pages, start=1):
+
+            writer = PdfWriter()
+            writer.add_page(page)
+
+            fichier_sortie = dossier_sortie / f"{numero_fichier}.pdf"
+
+            with open(fichier_sortie, "wb") as fichier:
+                writer.write(fichier)
+
+            print(
+                f"PDF créé : {fichier_sortie.name} "
+                f"| Source : {pdf_source.name} "
+                f"| Page : {numero_page}"
+            )
+
+            numero_fichier += 1
+            nombre_pages_total += 1
+
+    except Exception as erreur:
+        print(f"Erreur avec {pdf_source.name} : {erreur}")
+
+print("\n--------------------------------")
+print(f"Nombre de PDF sources : {len(liste_pdf)}")
+print(f"Nombre de pages extraites : {nombre_pages_total}")
+print(f"Dossier de sortie : {dossier_sortie}")
