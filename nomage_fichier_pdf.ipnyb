@@ -1,0 +1,141 @@
+from pathlib import Path
+from datetime import datetime
+import fitz
+import re
+
+DOSSIER_PDF = Path("/chemin/vers/les/pdf")
+
+
+def parse_pdf_date(value):
+    """
+    Convertit une date PDF comme :
+    D:20260521143025+01'00'
+    en datetime.
+    """
+    if not value:
+        return None
+
+    match = re.search(r"(\d{4})(\d{2})(\d{2})?", str(value))
+
+    if not match:
+        return None
+
+    year = int(match.group(1))
+    month = int(match.group(2))
+    day = int(match.group(3) or 1)
+
+    try:
+        return datetime(year, month, day)
+    except ValueError:
+        return None
+
+
+def get_pdf_reference_date(pdf_path):
+    """
+    Priorité :
+    1. CreationDate PDF
+    2. ModDate PDF
+    3. date de modification du fichier
+    """
+    creation_date = None
+    modification_date = None
+
+    try:
+        with fitz.open(pdf_path) as doc:
+            metadata = doc.metadata or {}
+
+            creation_date = parse_pdf_date(
+                metadata.get("creationDate")
+            )
+
+            modification_date = parse_pdf_date(
+                metadata.get("modDate")
+            )
+
+    except Exception as error:
+        print(f"Impossible de lire les métadonnées : {pdf_path.name}")
+        print(error)
+
+    if creation_date:
+        return creation_date, "PDF_CREATION_DATE"
+
+    if modification_date:
+        return modification_date, "PDF_MODIFICATION_DATE"
+
+    file_modification_date = datetime.fromtimestamp(
+        pdf_path.stat().st_mtime
+    )
+
+    return file_modification_date, "FILE_MODIFICATION_DATE"
+
+
+def clean_original_name(pdf_path):
+    """
+    Conserve la partie :
+    07NNN-NNNNNN
+
+    Exemple :
+    07000-670909-i.pdf
+    devient :
+    07000-670909
+    """
+    stem = pdf_path.stem
+
+    match = re.match(
+        r"^(07\d{3}-\d{6})",
+        stem,
+        flags=re.IGNORECASE
+    )
+
+    if match:
+        return match.group(1)
+
+    return stem
+
+
+def unique_destination(destination):
+    """
+    Évite d'écraser un fichier existant.
+    """
+    if not destination.exists():
+        return destination
+
+    counter = 2
+
+    while True:
+        candidate = destination.with_name(
+            f"{destination.stem}_{counter}{destination.suffix}"
+        )
+
+        if not candidate.exists():
+            return candidate
+
+        counter += 1
+
+
+pdf_files = sorted(DOSSIER_PDF.glob("*.pdf"))
+
+for pdf_path in pdf_files:
+
+    reference_date, date_source = get_pdf_reference_date(
+        pdf_path
+    )
+
+    aaaamm = reference_date.strftime("%Y%m")
+
+    base_name = clean_original_name(pdf_path)
+
+    new_name = f"{base_name}-{aaaamm}.pdf"
+
+    destination = pdf_path.with_name(new_name)
+
+    destination = unique_destination(destination)
+
+    pdf_path.rename(destination)
+
+    print(
+        f"{pdf_path.name} "
+        f"→ {destination.name} "
+        f"| date : {reference_date:%d/%m/%Y} "
+        f"| source : {date_source}"
+    )
