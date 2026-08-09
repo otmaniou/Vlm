@@ -298,3 +298,57 @@ Je testerais d’abord le fallback Triton offline, car il ne nécessite aucun t�
 
 
 
+
+
+
+
+
+
+import os
+import traceback
+
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_DISABLE_DEEPGEMM_LINEAR"] = "1"
+
+MODEL_PATH = "/domino/edv/modelhub/ModelHub-model-huggingface-Qwen/Qwen3.6-27B-FP8/main"
+
+print("MODEL_PATH existe :", os.path.isdir(MODEL_PATH))
+print("\nFichiers principaux :")
+
+for f in [
+    "config.json",
+    "generation_config.json",
+    "preprocessor_config.json",
+    "tokenizer_config.json",
+    "tokenizer.json",
+    "chat_template.jinja",
+    "model.safetensors.index.json"
+]:
+    p = os.path.join(MODEL_PATH, f)
+    print(f"{f:35} : {os.path.exists(p)}")
+
+
+
+
+
+from transformers import AutoProcessor
+
+try:
+    processor = AutoProcessor.from_pretrained(
+        MODEL_PATH,
+        local_files_only=True,
+        trust_remote_code=True
+    )
+    print("PROCESSOR OK")
+except Exception:
+    traceback.print_exc()
+
+
+
+
+
+
+
+
+
