@@ -53,3 +53,59 @@ print("Model type :", type(model))
 print("Device :", next(model.parameters()).device)
 print("Dtype :", next(model.parameters()).dtype)
 print("Model loaded OK")
+
+
+
+
+
+
+
+from PIL import Image
+import torch
+
+print("Model type :", type(model))
+print("Device :", next(model.parameters()).device)
+print("Dtype :", next(model.parameters()).dtype)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Réponds uniquement par OK."
+            }
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    add_generation_prompt=True,
+    tokenize=True,
+    return_dict=True,
+    return_tensors="pt",
+    enable_thinking=False,
+)
+
+inputs = {
+    k: v.to(model.device) if torch.is_tensor(v) else v
+    for k, v in inputs.items()
+}
+
+with torch.inference_mode():
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=10,
+        do_sample=False,
+    )
+
+generated = outputs[:, inputs["input_ids"].shape[1]:]
+
+print(
+    processor.batch_decode(
+        generated,
+        skip_special_tokens=True,
+        clean_up_tokenization_spaces=False,
+    )
+)
