@@ -455,3 +455,22 @@ print(result)
 
 
 
+
+
+
+
+
+
+
+
+
+
+import os
+
+os.environ["USE_HUB_KERNELS"] = "0"
+os.environ["TRANSFORMERS_DISABLE_DEEPGEMM_LINEAR"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
+
+
