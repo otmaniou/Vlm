@@ -60,6 +60,8 @@ print("Model loaded OK")
 
 
 
+
+
 from PIL import Image
 import torch
 
@@ -109,3 +111,61 @@ print(
         clean_up_tokenization_spaces=False,
     )
 )
+
+
+
+
+
+
+import kernels
+import torch
+import transformers
+
+print("kernels     :", kernels.__version__)
+print("torch       :", torch.__version__)
+print("transformers:", transformers.__version__)
+print("CUDA        :", torch.version.cuda)
+print("GPU         :", torch.cuda.get_device_name(0))
+
+
+
+from kernels import get_kernel
+
+fp8_kernel = get_kernel(
+    "kernels-community/finegrained-fp8",
+    version=4,
+    trust_remote_code=True,
+)
+
+print("Kernel FP8 chargé :", fp8_kernel)
+
+
+model = AutoModelForMultimodalLM.from_pretrained(...)
+
+
+
+
+
+
+
+from kernels import get_kernel
+
+fp8_kernel = get_kernel(
+    "kernels-community/finegrained-fp8",
+    version=4,
+    trust_remote_code=True,
+)
+
+print("OK")
+
+
+
+
+
+
+
+
+
+
+
+
