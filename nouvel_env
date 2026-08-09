@@ -166,6 +166,75 @@ print("OK")
 
 
 
+Là, le diagnostic est net : ce n’est plus un problème de Qwen, Torch, CUDA ou du H100. C’est un problème d’accès réseau depuis Domino.
+
+Ton test avec :
+
+get_kernel(
+    "kernels-community/finegrained-fp8",
+    version=4,
+    trust_remote_code=True
+)
+
+essaie de contacter Hugging Face pour récupérer le kernel FP8. Mais Domino répond :
+
+ConnectError: [Errno -2] Name or service not known
+
+Donc ton environnement Domino n’a pas accès à Internet/Hugging Face — ce qui est cohérent avec le fait que vos modèles sont fournis localement via /domino/edv/modelhub/....
+
+Le chemin est donc :
+
+Qwen3.6-27B-FP8 local
+        ↓
+Transformers
+        ↓
+finegrained-fp8
+        ↓
+kernels package
+        ↓
+cherche kernels-community/finegrained-fp8 sur Hugging Face
+        ↓
+❌ Domino sans accès Internet
+Ce que je recommande
+
+Ne modifions pas encore la V6.9. Il faut d'abord déterminer si on peut faire fonctionner Qwen3.6-FP8 100 % offline.
+
+Ton pip install kernels==0.15.2 n'installe pas nécessairement le kernel FP8 lui-même. Le package kernels sert notamment à charger dynamiquement des kernels depuis le Hub. C'est pour cela que l'installation a réussi, mais que l'inférence échoue ensuite.
+
+Avant toute autre installation, exécute dans le terminal Domino :
+
+python -m pip show kernels
+python -m pip show transformers
+python -m pip show torch
+
+et surtout :
+
+find ~/.cache/huggingface -iname "*finegrained*" 2>/dev/null
+
+puis :
+
+find /domino -iname "*finegrained*fp8*" 2>/dev/null | head -30
+
+Cela permettra de savoir si le kernel FP8 est déjà présent localement quelque part dans l'environnement Domino.
+
+Il y a aussi une autre possibilité
+
+Puisque votre ModelHub Domino propose directement :
+
+Qwen3.6-27B-FP8
+
+il est possible que l'équipe qui a publié ce modèle ait prévu une configuration/runtime spécifique pour l'exécuter. Sinon, le modèle est présent localement mais pas réellement exploitable offline avec le runtime Transformers actuel, puisqu'une dépendance d'exécution reste à télécharger.
+
+Je déconseille de chercher à contourner cela avec plusieurs pip install au hasard : ton environnement est actuellement propre, le H100 fonctionne et Qwen3.6 se charge. On risquerait de casser Torch/CUDA/Transformers alors que le problème est maintenant précisément identifié.
+
+Envoie-moi simplement le résultat des 5 commandes ci-dessus. On déterminera ensuite si on fait fonctionner le FP8 offline ou si, pour TOSYALI, il vaut mieux utiliser un checkpoint Qwen3.6 BF16/local plutôt que FP8.
+
+
+
+
+
+
+
 
 
 
