@@ -44,3 +44,12 @@ model = AutoModelForMultimodalLM.from_pretrained(
 )
 
 model.eval()
+
+
+
+
+
+print("Model type :", type(model))
+print("Device :", next(model.parameters()).device)
+print("Dtype :", next(model.parameters()).dtype)
+print("Model loaded OK")
