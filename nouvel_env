@@ -238,3 +238,63 @@ Envoie-moi simplement le résultat des 5 commandes ci-dessus. On déterminera en
 
 
 
+
+
+
+
+
+
+
+
+Oui, le modèle Qwen3.6-27B-FP8 est bien local, mais ce qui manque n’est pas le modèle : c’est le kernel d’exécution FP8 finegrained-fp8.
+
+Tes commandes montrent qu’il n’est présent ni dans ~/.cache/huggingface, ni ailleurs sous /domino. Donc au moment de l’inférence, transformers essaie de télécharger kernels-community/finegrained-fp8 depuis Hugging Face, et Domino n’a pas accès à Internet. Le package Python kernels==0.15.2 n’embarque pas ce kernel ; il sert à le charger depuis le Hub ou depuis un dépôt local.
+
+La bonne nouvelle est qu’on n’est pas obligé d’abandonner Qwen3.6-FP8. La documentation Transformers prévoit un fallback Triton si le kernel optimisé n’est pas disponible. On peut même forcer ce chemin avec :
+
+export TRANSFORMERS_DISABLE_DEEPGEMM_LINEAR=1
+
+Transformers indique que si le kernel optimisé ne peut pas être chargé, il doit basculer vers son implémentation Triton fine-grained FP8.
+
+Dans ton notebook, mets avant l’import de transformers et avant le chargement du modèle :
+
+import os
+
+os.environ["TRANSFORMERS_DISABLE_DEEPGEMM_LINEAR"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+
+Puis :
+
+import torch
+from transformers import AutoProcessor, AutoModelForMultimodalLM
+
+et recharge le modèle avec son chemin local :
+
+MODEL_PATH = "/domino/edv/modelhub/ModelHub-model-huggingface-Qwen/Qwen3.6-27B-FP8/main"
+
+processor = AutoProcessor.from_pretrained(
+    MODEL_PATH,
+    local_files_only=True,
+)
+
+model = AutoModelForMultimodalLM.from_pretrained(
+    MODEL_PATH,
+    device_map="auto",
+    dtype="auto",
+    local_files_only=True,
+)
+
+model.eval()
+
+Après avoir modifié ces variables, fais Kernel → Restart Kernel, puis relance depuis le début. Il est important que TRANSFORMERS_DISABLE_DEEPGEMM_LINEAR soit défini avant le chargement de transformers.
+
+Si malgré cela il cherche encore kernels-community/finegrained-fp8, alors ta version transformers 5.14.1 emprunte un chemin différent et on adaptera précisément le chargement. Dans ce cas, l’autre solution propre est de demander à l’équipe ModelHub de publier également le dépôt finegrained-fp8 localement ; la bibliothèque kernels sait charger directement un dépôt local via get_local_kernel().
+
+Je testerais d’abord le fallback Triton offline, car il ne nécessite aucun téléchargement ni ajout à ModelHub.
+
+
+
+
+
+
