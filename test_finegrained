@@ -1,43 +1,33 @@
-import torch
+# Diagnostic des poids/scales FP8
 
-messages = [
-    {
-        "role": "user",
-        "content": "Réponds uniquement par : TEST FP8 OK"
-    }
-]
+layer = model.language_model.layers[0].mlp.gate_proj
 
-text = processor.apply_chat_template(
-    messages,
-    tokenize=False,
-    add_generation_prompt=True
-)
+print("=== GATE_PROJ LAYER 0 ===")
+print("Type :", type(layer))
 
-inputs = processor(
-    text=text,
-    return_tensors="pt"
-)
+print("\nAttributs intéressants :")
+for name in dir(layer):
+    if "scale" in name.lower() or "weight" in name.lower():
+        try:
+            obj = getattr(layer, name)
 
-inputs = {
-    k: v.to(model.device) if torch.is_tensor(v) else v
-    for k, v in inputs.items()
-}
+            if torch.is_tensor(obj):
+                print(
+                    name,
+                    "| shape =", tuple(obj.shape),
+                    "| dtype =", obj.dtype,
+                    "| device =", obj.device
+                )
+            else:
+                print(name, "=", obj)
 
-print("Lancement génération FP8...")
+        except Exception as e:
+            print(name, "-> erreur :", e)
 
-with torch.inference_mode():
-    generated_ids = model.generate(
-        **inputs,
-        max_new_tokens=20,
-        do_sample=False
+print("\n=== STATE DICT ===")
+for name, tensor in layer.state_dict().items():
+    print(
+        name,
+        "| shape =", tuple(tensor.shape),
+        "| dtype =", tensor.dtype
     )
-
-new_tokens = generated_ids[:, inputs["input_ids"].shape[1]:]
-
-result = processor.batch_decode(
-    new_tokens,
-    skip_special_tokens=True
-)[0]
-
-print("\n=== RESULTAT ===")
-print(result)
