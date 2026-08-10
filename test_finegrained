@@ -1,36 +1,27 @@
-import sys
-import importlib.util
-from pathlib import Path
+# 7. Récupérer explicitement les fonctions FP8 locales
 
-KERNEL_DIR = Path("/mnt/finegrained-fp8/build/torch-cuda")
+import importlib
 
-print("Kernel dir :", KERNEL_DIR)
-print("Existe     :", KERNEL_DIR.exists())
-
-if not KERNEL_DIR.exists():
-    raise FileNotFoundError(KERNEL_DIR)
-
-# Charger le dossier comme un vrai package Python
-package_name = "local_finegrained_fp8"
-
-spec = importlib.util.spec_from_file_location(
-    package_name,
-    KERNEL_DIR / "__init__.py",
-    submodule_search_locations=[str(KERNEL_DIR)]
+matmul_module = importlib.import_module(
+    "local_finegrained_fp8.matmul"
 )
 
-local_fp8_kernel = importlib.util.module_from_spec(spec)
+batched_module = importlib.import_module(
+    "local_finegrained_fp8.batched"
+)
 
-# Très important pour que les imports relatifs fonctionnent
-sys.modules[package_name] = local_fp8_kernel
+grouped_module = importlib.import_module(
+    "local_finegrained_fp8.grouped"
+)
 
-spec.loader.exec_module(local_fp8_kernel)
+print("=== MATMUL ===")
+print("module :", matmul_module)
+print("fonctions :", [x for x in dir(matmul_module) if "matmul" in x.lower()])
 
-print("\nKERNEL CHARGE")
-print("Module :", local_fp8_kernel)
-print("Fichier:", local_fp8_kernel.__file__)
+print("\n=== BATCHED ===")
+print("module :", batched_module)
+print("fonctions :", [x for x in dir(batched_module) if "matmul" in x.lower()])
 
-print("\nFonctions disponibles :")
-print("matmul         :", getattr(local_fp8_kernel, "matmul", None))
-print("matmul_batched :", getattr(local_fp8_kernel, "matmul_batched", None))
-print("grouped_matmul :", getattr(local_fp8_kernel, "grouped_matmul", None))
+print("\n=== GROUPED ===")
+print("module :", grouped_module)
+print("fonctions :", [x for x in dir(grouped_module) if "matmul" in x.lower()])
