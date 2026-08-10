@@ -1,20 +1,22 @@
-# 8. Construire l'interface attendue par Transformers
+# 9. Patch du loader FP8 de Transformers
 
-from types import SimpleNamespace
+import transformers.integrations.finegrained_fp8 as fp8
 
-local_fp8_kernel = SimpleNamespace(
-    matmul=matmul_module.matmul_2d,
-    matmul_batched=batched_module.matmul_batched,
-    grouped_matmul=grouped_module.matmul_grouped,
-)
+def local_loader(*args, **kwargs):
+    print(">>> Utilisation du kernel FP8 LOCAL")
+    return local_fp8_kernel
 
-print("=== KERNEL FP8 LOCAL ===")
-print("matmul         :", local_fp8_kernel.matmul)
-print("matmul_batched :", local_fp8_kernel.matmul_batched)
-print("grouped_matmul :", local_fp8_kernel.grouped_matmul)
+# Patch principal
+fp8.load_finegrained_fp8_kernel = local_loader
 
-assert callable(local_fp8_kernel.matmul)
-assert callable(local_fp8_kernel.matmul_batched)
-assert callable(local_fp8_kernel.grouped_matmul)
+print("Loader patché :", fp8.load_finegrained_fp8_kernel)
 
-print("\nOK : les 3 fonctions FP8 sont appelables")
+# Test
+k = fp8.load_finegrained_fp8_kernel()
+
+assert k is local_fp8_kernel
+assert callable(k.matmul)
+assert callable(k.matmul_batched)
+assert callable(k.grouped_matmul)
+
+print("OK : Transformers retourne bien le kernel FP8 local")
