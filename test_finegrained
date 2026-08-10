@@ -1,20 +1,66 @@
-print("=== STRUCTURE MODELE ===")
-print(type(model))
+# ============================================================
+# DIAGNOSTIC FP8 DU PREMIER GATE_PROJ
+# ============================================================
 
-print("\nModules niveau 1 :")
-for name, module in model.named_children():
-    print(name, "->", type(module))
+layer = model.model.language_model.layers[0].mlp.gate_proj
 
-print("\nRecherche de gate_proj :")
+print("=== GATE_PROJ LAYER 0 ===")
+print("Type :", type(layer))
 
-found = []
+print("\n=== ATTRIBUTS ===")
+for attr in [
+    "weight",
+    "weight_scale",
+    "weight_scale_inv",
+    "input_scale",
+    "input_scale_inv",
+    "bias"
+]:
+    if hasattr(layer, attr):
+        obj = getattr(layer, attr)
 
-for name, module in model.named_modules():
-    if name.endswith("gate_proj"):
-        print(name, "->", type(module))
-        found.append(name)
+        if obj is None:
+            print(attr, "= None")
+        else:
+            print(
+                attr,
+                "| type =", type(obj),
+                "| shape =", getattr(obj, "shape", None),
+                "| dtype =", getattr(obj, "dtype", None),
+                "| device =", getattr(obj, "device", None)
+            )
+    else:
+        print(attr, "= ABSENT")
 
-        if len(found) >= 10:
-            break
 
-print("\nNombre affiché :", len(found))
+print("\n=== STATE_DICT ===")
+
+for name, tensor in layer.state_dict().items():
+    print(
+        name,
+        "| shape =", tuple(tensor.shape),
+        "| dtype =", tensor.dtype,
+        "| device =", tensor.device
+    )
+
+
+print("\n=== POIDS ===")
+
+w = layer.weight
+
+print("weight dtype :", w.dtype)
+print("weight shape :", tuple(w.shape))
+print("weight device:", w.device)
+print("is_floating_point :", w.is_floating_point())
+
+print("\n=== CONFIG QUANTIZATION ===")
+
+qc = getattr(model.config, "quantization_config", None)
+
+print("quantization_config :", qc)
+
+if qc is not None:
+    try:
+        print(qc.to_dict())
+    except:
+        print(vars(qc))
