@@ -1,0 +1,67 @@
+# ============================================================
+# TEST DIAGNOSTIC QWEN3.6 - UNE SEULE PAGE
+# ============================================================
+
+from pathlib import Path
+import time
+
+# Mets ici le PDF que tu veux tester
+TEST_PDF = Path("/mnt/data/transferts_in/TASCAN OZCAN.pdf")
+
+print("PDF :", TEST_PDF)
+print("Existe :", TEST_PDF.exists())
+
+# Conversion du PDF
+pages_test = pdf_to_pages(TEST_PDF)
+
+print("Nombre de pages :", len(pages_test))
+
+# On teste uniquement la première page
+image_test = pages_test[0]["image"]
+
+print("Taille image :", image_test.size)
+
+prompt_test = """
+Observe attentivement cette image de document bancaire.
+
+1. Dis-moi quel type de document tu vois.
+2. Recopie quelques informations visibles sur le document.
+3. Réponds brièvement.
+
+Ne fais aucun raisonnement.
+"""
+
+print("\n--- LANCEMENT QWEN3.6 ---")
+
+inputs = _build_inputs(prompt_test, image_test)
+
+print("Clés envoyées au modèle :", list(inputs.keys()))
+print("Tokens entrée :", inputs["input_ids"].shape[1])
+
+t0 = time.time()
+
+with torch.inference_mode():
+    out = model.generate(
+        **inputs,
+        max_new_tokens=150,
+        do_sample=False
+    )
+
+elapsed = time.time() - t0
+
+in_len = inputs["input_ids"].shape[1]
+generated = out[0][in_len:]
+
+raw_text = processor.batch_decode(
+    generated.unsqueeze(0),
+    skip_special_tokens=True,
+    clean_up_tokenization_spaces=False
+)[0]
+
+print("\n========================================")
+print("REPONSE BRUTE QWEN3.6")
+print("========================================")
+print(raw_text)
+print("========================================")
+print("Temps :", round(elapsed, 2), "secondes")
+print("Tokens générés :", len(generated))
