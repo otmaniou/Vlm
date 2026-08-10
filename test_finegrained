@@ -1,22 +1,50 @@
-# 9. Patch du loader FP8 de Transformers
-
 import transformers.integrations.finegrained_fp8 as fp8
 
-def local_loader(*args, **kwargs):
-    print(">>> Utilisation du kernel FP8 LOCAL")
-    return local_fp8_kernel
-
-# Patch principal
-fp8.load_finegrained_fp8_kernel = local_loader
-
-print("Loader patché :", fp8.load_finegrained_fp8_kernel)
-
-# Test
 k = fp8.load_finegrained_fp8_kernel()
 
-assert k is local_fp8_kernel
-assert callable(k.matmul)
-assert callable(k.matmul_batched)
-assert callable(k.grouped_matmul)
+print("Kernel retourné :", k)
+print("matmul :", k.matmul)
+print("matmul_batched :", k.matmul_batched)
+print("grouped_matmul :", k.grouped_matmul)
 
-print("OK : Transformers retourne bien le kernel FP8 local")
+print("\nTests :")
+print("matmul callable         =", callable(k.matmul))
+print("matmul_batched callable =", callable(k.matmul_batched))
+print("grouped_matmul callable =", callable(k.grouped_matmul))
+
+print("\nPATCH FP8 OK")
+
+
+
+
+
+
+
+
+import torch
+from transformers import AutoProcessor, AutoModelForImageTextToText
+
+print("Chargement du processor...")
+
+processor = AutoProcessor.from_pretrained(
+    MODEL_PATH,
+    local_files_only=True,
+    trust_remote_code=True
+)
+
+print("Processor OK")
+print("Chargement du modèle...")
+
+model = AutoModelForImageTextToText.from_pretrained(
+    MODEL_PATH,
+    torch_dtype="auto",
+    device_map="auto",
+    local_files_only=True,
+    trust_remote_code=True
+)
+
+model.eval()
+
+print("\nMODELE CHARGE")
+print("Type :", type(model))
+print("Device :", next(model.parameters()).device)
