@@ -42,3 +42,13 @@ try:
 except Exception as e:
     print("Loader Transformers FP8 : ECHEC")
     print(type(e).__name__, ":", e)
+
+
+
+model = AutoModelForMultimodalLM.from_pretrained(
+    str(MODEL_PATH),
+    local_files_only=True,
+    trust_remote_code=True,
+    device_map="auto",
+    dtype="auto"
+)
