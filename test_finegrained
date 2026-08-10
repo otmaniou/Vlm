@@ -1,54 +1,46 @@
-# ============================================================
-# COMPTEUR DES APPELS AUX 3 KERNELS FP8
-# ============================================================
+import torch
 
-calls = {
-    "matmul": 0,
-    "matmul_batched": 0,
-    "grouped_matmul": 0
+# Remise à zéro
+calls["matmul"] = 0
+calls["matmul_batched"] = 0
+calls["grouped_matmul"] = 0
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Réponds uniquement : TEST FP8 OK"
+            }
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+
+inputs = {
+    k: v.to(model.device) if hasattr(v, "to") else v
+    for k, v in inputs.items()
 }
 
-original_matmul = local_fp8_kernel.matmul
-original_matmul_batched = local_fp8_kernel.matmul_batched
-original_grouped_matmul = local_fp8_kernel.grouped_matmul
+print("=== GENERATION ===")
 
+with torch.inference_mode():
+    output = model.generate(
+        **inputs,
+        max_new_tokens=10,
+        do_sample=False
+    )
 
-def traced_matmul(*args, **kwargs):
-    calls["matmul"] += 1
-    return original_matmul(*args, **kwargs)
-
-
-def traced_matmul_batched(*args, **kwargs):
-    calls["matmul_batched"] += 1
-    return original_matmul_batched(*args, **kwargs)
-
-
-def traced_grouped_matmul(*args, **kwargs):
-    calls["grouped_matmul"] += 1
-    return original_grouped_matmul(*args, **kwargs)
-
-
-local_fp8_kernel.matmul = traced_matmul
-local_fp8_kernel.matmul_batched = traced_matmul_batched
-local_fp8_kernel.grouped_matmul = traced_grouped_matmul
-
-print("Compteurs FP8 installés.")
-
-
-
-
-
-
-
-
-
-
-
-print("\n=== APPELS KERNEL FP8 ===")
+print("\n=== COMPTEURS FP8 ===")
 print("matmul         :", calls["matmul"])
 print("matmul_batched :", calls["matmul_batched"])
 print("grouped_matmul :", calls["grouped_matmul"])
 print("TOTAL          :", sum(calls.values()))
-
-
-
