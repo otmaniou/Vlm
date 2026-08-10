@@ -27,3 +27,18 @@ fp8.lazy_load_kernel = lambda *args, **kwargs: local_fp8_kernel
 fp8._load_finegrained_fp8_kernel.cache_clear()
 
 print("Patch Transformers installé")
+
+
+
+
+# Test du loader FP8 de Transformers
+try:
+    kernel = fp8._load_finegrained_fp8_kernel()
+
+    print("Loader Transformers FP8 : OK")
+    print("Type :", type(kernel))
+    print(kernel)
+
+except Exception as e:
+    print("Loader Transformers FP8 : ECHEC")
+    print(type(e).__name__, ":", e)
