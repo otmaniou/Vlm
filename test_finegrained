@@ -1,0 +1,17 @@
+import sys
+import importlib
+
+KERNEL_PATH = "/mnt/finegrained-fp8/build/torch-cuda"
+
+# Ajouter le kernel local à Python
+if KERNEL_PATH not in sys.path:
+    sys.path.insert(0, KERNEL_PATH)
+
+# Charger le kernel
+local_fp8_kernel = importlib.import_module("finegrained_fp8")
+
+print("Kernel chargé depuis :", local_fp8_kernel.__file__)
+
+# Vérifier les 3 fonctions nécessaires
+for name in ["matmul_2d", "matmul_batched", "matmul_grouped"]:
+    print(name, ":", hasattr(local_fp8_kernel, name))
