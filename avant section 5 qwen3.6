@@ -175,3 +175,50 @@ model = AutoModelForMultimodalLM.from_pretrained(
 )
 
 print("MODEL OK")
+
+
+
+
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Réponds uniquement par : BONJOUR OMAR"
+            }
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+)
+
+inputs = {
+    k: v.to(model.device) if hasattr(v, "to") else v
+    for k, v in inputs.items()
+}
+
+print("Tokens entrée :", inputs["input_ids"].shape[1])
+
+with torch.inference_mode():
+    generated_ids = model.generate(
+        **inputs,
+        max_new_tokens=30,
+        do_sample=False
+    )
+
+new_tokens = generated_ids[:, inputs["input_ids"].shape[1]:]
+
+response = processor.batch_decode(
+    new_tokens,
+    skip_special_tokens=True
+)[0]
+
+print("REPONSE :", repr(response))
