@@ -1,73 +1,54 @@
-import torch
+# ============================================================
+# COMPTEUR DES APPELS AUX 3 KERNELS FP8
+# ============================================================
 
-print("=== RECHERCHE DES POIDS FP8 DANS LE MODELE ===")
+calls = {
+    "matmul": 0,
+    "matmul_batched": 0,
+    "grouped_matmul": 0
+}
 
-fp8_found = []
-bf16_found = []
-scale_found = []
-
-for name, module in model.named_modules():
-
-    # Chercher weight
-    if hasattr(module, "weight") and module.weight is not None:
-        try:
-            dtype = module.weight.dtype
-
-            if "float8" in str(dtype):
-                fp8_found.append(
-                    (name, type(module).__name__,
-                     tuple(module.weight.shape), dtype)
-                )
-
-            elif dtype == torch.bfloat16:
-                bf16_found.append(name)
-
-        except Exception:
-            pass
-
-    # Chercher les scales FP8
-    for attr in [
-        "weight_scale",
-        "weight_scale_inv",
-        "input_scale",
-        "input_scale_inv"
-    ]:
-        if hasattr(module, attr):
-            obj = getattr(module, attr)
-
-            if obj is not None:
-                scale_found.append(
-                    (
-                        name,
-                        attr,
-                        getattr(obj, "shape", None),
-                        getattr(obj, "dtype", None)
-                    )
-                )
+original_matmul = local_fp8_kernel.matmul
+original_matmul_batched = local_fp8_kernel.matmul_batched
+original_grouped_matmul = local_fp8_kernel.grouped_matmul
 
 
-print("\n==============================")
-print("POIDS FP8 TROUVES :", len(fp8_found))
-print("==============================")
-
-for x in fp8_found[:30]:
-    print(x)
+def traced_matmul(*args, **kwargs):
+    calls["matmul"] += 1
+    return original_matmul(*args, **kwargs)
 
 
-print("\n==============================")
-print("SCALES FP8 TROUVEES :", len(scale_found))
-print("==============================")
-
-for x in scale_found[:30]:
-    print(x)
+def traced_matmul_batched(*args, **kwargs):
+    calls["matmul_batched"] += 1
+    return original_matmul_batched(*args, **kwargs)
 
 
-print("\n==============================")
-print("MODULES BF16 :", len(bf16_found))
-print("==============================")
+def traced_grouped_matmul(*args, **kwargs):
+    calls["grouped_matmul"] += 1
+    return original_grouped_matmul(*args, **kwargs)
 
 
-if len(fp8_found) == 0:
-    print("ATTENTION : aucun weight float8 trouvé dans le modèle chargé.")
-else:
-    print("OK : le modèle contient réellement des poids FP8.")
+local_fp8_kernel.matmul = traced_matmul
+local_fp8_kernel.matmul_batched = traced_matmul_batched
+local_fp8_kernel.grouped_matmul = traced_grouped_matmul
+
+print("Compteurs FP8 installés.")
+
+
+
+
+
+
+
+
+
+
+
+print("\n=== APPELS KERNEL FP8 ===")
+print("matmul         :", calls["matmul"])
+print("matmul_batched :", calls["matmul_batched"])
+print("grouped_matmul :", calls["grouped_matmul"])
+print("TOTAL          :", sum(calls.values()))
+
+
+
