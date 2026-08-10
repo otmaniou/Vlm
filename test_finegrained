@@ -1,54 +1,36 @@
 import sys
-import importlib
+import importlib.util
+from pathlib import Path
 
-KERNEL_PATH = "/mnt/finegrained-fp8/build/torch-cuda"
+KERNEL_DIR = Path("/mnt/finegrained-fp8/build/torch-cuda")
 
-# Ajouter le kernel local à Python
-if KERNEL_PATH not in sys.path:
-    sys.path.insert(0, KERNEL_PATH)
+print("Kernel dir :", KERNEL_DIR)
+print("Existe     :", KERNEL_DIR.exists())
 
-# Charger le kernel
-local_fp8_kernel = importlib.import_module("finegrained_fp8")
+if not KERNEL_DIR.exists():
+    raise FileNotFoundError(KERNEL_DIR)
 
-print("Kernel chargé depuis :", local_fp8_kernel.__file__)
+# Charger le dossier comme un vrai package Python
+package_name = "local_finegrained_fp8"
 
-# Vérifier les 3 fonctions nécessaires
-for name in ["matmul_2d", "matmul_batched", "matmul_grouped"]:
-    print(name, ":", hasattr(local_fp8_kernel, name))
-
-
-
-import transformers.integrations.finegrained_fp8 as fp8
-
-# Remplacer le chargement Hugging Face par notre kernel local
-fp8.lazy_load_kernel = lambda *args, **kwargs: local_fp8_kernel
-
-# Vider le cache du précédent échec
-fp8._load_finegrained_fp8_kernel.cache_clear()
-
-print("Patch Transformers installé")
-
-
-
-
-# Test du loader FP8 de Transformers
-try:
-    kernel = fp8._load_finegrained_fp8_kernel()
-
-    print("Loader Transformers FP8 : OK")
-    print("Type :", type(kernel))
-    print(kernel)
-
-except Exception as e:
-    print("Loader Transformers FP8 : ECHEC")
-    print(type(e).__name__, ":", e)
-
-
-
-model = AutoModelForMultimodalLM.from_pretrained(
-    str(MODEL_PATH),
-    local_files_only=True,
-    trust_remote_code=True,
-    device_map="auto",
-    dtype="auto"
+spec = importlib.util.spec_from_file_location(
+    package_name,
+    KERNEL_DIR / "__init__.py",
+    submodule_search_locations=[str(KERNEL_DIR)]
 )
+
+local_fp8_kernel = importlib.util.module_from_spec(spec)
+
+# Très important pour que les imports relatifs fonctionnent
+sys.modules[package_name] = local_fp8_kernel
+
+spec.loader.exec_module(local_fp8_kernel)
+
+print("\nKERNEL CHARGE")
+print("Module :", local_fp8_kernel)
+print("Fichier:", local_fp8_kernel.__file__)
+
+print("\nFonctions disponibles :")
+print("matmul         :", getattr(local_fp8_kernel, "matmul", None))
+print("matmul_batched :", getattr(local_fp8_kernel, "matmul_batched", None))
+print("grouped_matmul :", getattr(local_fp8_kernel, "grouped_matmul", None))
