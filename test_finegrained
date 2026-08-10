@@ -1,33 +1,20 @@
-# Diagnostic des poids/scales FP8
+print("=== STRUCTURE MODELE ===")
+print(type(model))
 
-layer = model.language_model.layers[0].mlp.gate_proj
+print("\nModules niveau 1 :")
+for name, module in model.named_children():
+    print(name, "->", type(module))
 
-print("=== GATE_PROJ LAYER 0 ===")
-print("Type :", type(layer))
+print("\nRecherche de gate_proj :")
 
-print("\nAttributs intéressants :")
-for name in dir(layer):
-    if "scale" in name.lower() or "weight" in name.lower():
-        try:
-            obj = getattr(layer, name)
+found = []
 
-            if torch.is_tensor(obj):
-                print(
-                    name,
-                    "| shape =", tuple(obj.shape),
-                    "| dtype =", obj.dtype,
-                    "| device =", obj.device
-                )
-            else:
-                print(name, "=", obj)
+for name, module in model.named_modules():
+    if name.endswith("gate_proj"):
+        print(name, "->", type(module))
+        found.append(name)
 
-        except Exception as e:
-            print(name, "-> erreur :", e)
+        if len(found) >= 10:
+            break
 
-print("\n=== STATE DICT ===")
-for name, tensor in layer.state_dict().items():
-    print(
-        name,
-        "| shape =", tuple(tensor.shape),
-        "| dtype =", tensor.dtype
-    )
+print("\nNombre affiché :", len(found))
