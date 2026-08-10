@@ -1,27 +1,20 @@
-# 7. Récupérer explicitement les fonctions FP8 locales
+# 8. Construire l'interface attendue par Transformers
 
-import importlib
+from types import SimpleNamespace
 
-matmul_module = importlib.import_module(
-    "local_finegrained_fp8.matmul"
+local_fp8_kernel = SimpleNamespace(
+    matmul=matmul_module.matmul_2d,
+    matmul_batched=batched_module.matmul_batched,
+    grouped_matmul=grouped_module.matmul_grouped,
 )
 
-batched_module = importlib.import_module(
-    "local_finegrained_fp8.batched"
-)
+print("=== KERNEL FP8 LOCAL ===")
+print("matmul         :", local_fp8_kernel.matmul)
+print("matmul_batched :", local_fp8_kernel.matmul_batched)
+print("grouped_matmul :", local_fp8_kernel.grouped_matmul)
 
-grouped_module = importlib.import_module(
-    "local_finegrained_fp8.grouped"
-)
+assert callable(local_fp8_kernel.matmul)
+assert callable(local_fp8_kernel.matmul_batched)
+assert callable(local_fp8_kernel.grouped_matmul)
 
-print("=== MATMUL ===")
-print("module :", matmul_module)
-print("fonctions :", [x for x in dir(matmul_module) if "matmul" in x.lower()])
-
-print("\n=== BATCHED ===")
-print("module :", batched_module)
-print("fonctions :", [x for x in dir(batched_module) if "matmul" in x.lower()])
-
-print("\n=== GROUPED ===")
-print("module :", grouped_module)
-print("fonctions :", [x for x in dir(grouped_module) if "matmul" in x.lower()])
+print("\nOK : les 3 fonctions FP8 sont appelables")
