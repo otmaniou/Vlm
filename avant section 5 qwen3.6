@@ -1,184 +1,39 @@
-# ============================================================
-# TEST DIAGNOSTIC QWEN3.6 - UNE SEULE PAGE
-# ============================================================
+import os
 
-from pathlib import Path
-import time
-
-# Mets ici le PDF que tu veux tester
-TEST_PDF = Path("/mnt/data/transferts_in/TASCAN OZCAN.pdf")
-
-print("PDF :", TEST_PDF)
-print("Existe :", TEST_PDF.exists())
-
-# Conversion du PDF
-pages_test = pdf_to_pages(TEST_PDF)
-
-print("Nombre de pages :", len(pages_test))
-
-# On teste uniquement la première page
-image_test = pages_test[0]["image"]
-
-print("Taille image :", image_test.size)
-
-prompt_test = """
-Observe attentivement cette image de document bancaire.
-
-1. Dis-moi quel type de document tu vois.
-2. Recopie quelques informations visibles sur le document.
-3. Réponds brièvement.
-
-Ne fais aucun raisonnement.
-"""
-
-print("\n--- LANCEMENT QWEN3.6 ---")
-
-inputs = _build_inputs(prompt_test, image_test)
-
-print("Clés envoyées au modèle :", list(inputs.keys()))
-print("Tokens entrée :", inputs["input_ids"].shape[1])
-
-t0 = time.time()
-
-with torch.inference_mode():
-    out = model.generate(
-        **inputs,
-        max_new_tokens=150,
-        do_sample=False
-    )
-
-elapsed = time.time() - t0
-
-in_len = inputs["input_ids"].shape[1]
-generated = out[0][in_len:]
-
-raw_text = processor.batch_decode(
-    generated.unsqueeze(0),
-    skip_special_tokens=True,
-    clean_up_tokenization_spaces=False
-)[0]
-
-print("\n========================================")
-print("REPONSE BRUTE QWEN3.6")
-print("========================================")
-print(raw_text)
-print("========================================")
-print("Temps :", round(elapsed, 2), "secondes")
-print("Tokens générés :", len(generated))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-messages = [
-    {
-        "role": "user",
-        "content": [
-            {
-                "type": "text",
-                "text": "Réponds uniquement par cette phrase : BONJOUR OMAR"
-            }
-        ]
-    }
-]
-
-inputs = processor.apply_chat_template(
-    messages,
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt",
-)
-
-inputs = {
-    k: v.to(model.device) if hasattr(v, "to") else v
-    for k, v in inputs.items()
-}
-
-with torch.inference_mode():
-    generated_ids = model.generate(
-        **inputs,
-        max_new_tokens=30,
-        do_sample=False
-    )
-
-new_tokens = generated_ids[:, inputs["input_ids"].shape[1]:]
-
-print(
-    processor.batch_decode(
-        new_tokens,
-        skip_special_tokens=True
-    )[0]
-)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Ton Domino n'a pas nvcc : forcer le fallback Triton
+os.environ["TRANSFORMERS_DISABLE_DEEPGEMM_LINEAR"] = "1"
 
 import torch
-import transformers
-
-print("Torch:", torch.__version__)
-print("CUDA:", torch.version.cuda)
-print("Transformers:", transformers.__version__)
-print("GPU:", torch.cuda.get_device_name(0))
-
-MODEL_PATH = "/TON/CHEMIN/Qwen3.6-27B-FP8"
-
 from transformers import AutoProcessor, AutoModelForMultimodalLM
+
+MODEL_PATH = "TON_CHEMIN_LOCAL_QWEN3.6-27B-FP8"
+
+print("Torch :", torch.__version__)
+print("CUDA :", torch.version.cuda)
+print("GPU :", torch.cuda.get_device_name(0))
+
+Ensuite charge exactement comme recommandé par Qwen/Hugging Face :
 
 processor = AutoProcessor.from_pretrained(
     MODEL_PATH,
-    local_files_only=True
+    local_files_only=True,
+    trust_remote_code=True
 )
 
 model = AutoModelForMultimodalLM.from_pretrained(
     MODEL_PATH,
     local_files_only=True,
-    device_map="auto"
+    trust_remote_code=True,
+    device_map="auto",
+    dtype="auto"
 )
+
+model.eval()
 
 print("MODEL OK")
+print(type(model))
 
-
-
-
+Puis ne teste pas encore le PDF. Teste :
 
 messages = [
     {
@@ -194,106 +49,33 @@ messages = [
 
 inputs = processor.apply_chat_template(
     messages,
-    tokenize=True,
     add_generation_prompt=True,
+    tokenize=True,
     return_dict=True,
     return_tensors="pt",
-)
-
-inputs = {
-    k: v.to(model.device) if hasattr(v, "to") else v
-    for k, v in inputs.items()
-}
-
-print("Tokens entrée :", inputs["input_ids"].shape[1])
-
-with torch.inference_mode():
-    generated_ids = model.generate(
-        **inputs,
-        max_new_tokens=30,
-        do_sample=False
-    )
-
-new_tokens = generated_ids[:, inputs["input_ids"].shape[1]:]
-
-response = processor.batch_decode(
-    new_tokens,
-    skip_special_tokens=True
-)[0]
-
-print("REPONSE :", repr(response))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# TEST TEXTE PUR - QWEN3.6-27B-FP8
-# A exécuter APRES le patch FP8 et APRES le chargement du modèle
-
-from transformers import AutoProcessor
-import torch
-
-processor = AutoProcessor.from_pretrained(
-    str(MODEL_PATH),
-    local_files_only=True,
-    trust_remote_code=True
-)
-
-messages = [
-    {
-        "role": "user",
-        "content": [
-            {
-                "type": "text",
-                "text": "Réponds uniquement par : BONJOUR OMAR"
-            }
-        ]
-    }
-]
-
-inputs = processor.apply_chat_template(
-    messages,
-    tokenize=True,
-    add_generation_prompt=True,
-    return_dict=True,
-    return_tensors="pt"
-)
-
-inputs = {
-    k: v.to(model.device) if hasattr(v, "to") else v
-    for k, v in inputs.items()
-}
-
-print("Tokens entrée :", inputs["input_ids"].shape[-1])
+).to(model.device)
 
 with torch.inference_mode():
     outputs = model.generate(
         **inputs,
-        max_new_tokens=30,
+        max_new_tokens=20,
         do_sample=False
     )
 
-generated = outputs[:, inputs["input_ids"].shape[-1]:]
+generated = outputs[0][inputs["input_ids"].shape[-1]:]
 
-response = processor.batch_decode(
-    generated,
-    skip_special_tokens=True
-)[0]
+print(processor.decode(generated, skip_special_tokens=True))
 
-print("\n==============================")
-print("REPONSE QWEN3.6 TEXTE")
-print("==============================")
-print(response)
-print("==============================")
+C'est pratiquement le schéma de génération fourni officiellement pour Qwen3.6.
+
+Résultat attendu :
+
+BONJOUR OMAR
+
+Si nous obtenons encore :
+
+杨杨杨杨...
+
+alors on saura avec certitude que le problème est dans le chargement FP8 / modèle / processor, et non dans ton PDF, ton prompt OCR ou ton pipeline.
+
+Si le texte fonctionne, nous passerons immédiatement au test d'une seule image de document. C'est la bonne façon d'isoler le problème avant de relancer tes 166 PDF.
