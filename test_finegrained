@@ -15,3 +15,15 @@ print("Kernel chargé depuis :", local_fp8_kernel.__file__)
 # Vérifier les 3 fonctions nécessaires
 for name in ["matmul_2d", "matmul_batched", "matmul_grouped"]:
     print(name, ":", hasattr(local_fp8_kernel, name))
+
+
+
+import transformers.integrations.finegrained_fp8 as fp8
+
+# Remplacer le chargement Hugging Face par notre kernel local
+fp8.lazy_load_kernel = lambda *args, **kwargs: local_fp8_kernel
+
+# Vider le cache du précédent échec
+fp8._load_finegrained_fp8_kernel.cache_clear()
+
+print("Patch Transformers installé")
