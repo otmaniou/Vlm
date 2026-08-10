@@ -1,66 +1,73 @@
-# ============================================================
-# DIAGNOSTIC FP8 DU PREMIER GATE_PROJ
-# ============================================================
+import torch
 
-layer = model.model.language_model.layers[0].mlp.gate_proj
+print("=== RECHERCHE DES POIDS FP8 DANS LE MODELE ===")
 
-print("=== GATE_PROJ LAYER 0 ===")
-print("Type :", type(layer))
+fp8_found = []
+bf16_found = []
+scale_found = []
 
-print("\n=== ATTRIBUTS ===")
-for attr in [
-    "weight",
-    "weight_scale",
-    "weight_scale_inv",
-    "input_scale",
-    "input_scale_inv",
-    "bias"
-]:
-    if hasattr(layer, attr):
-        obj = getattr(layer, attr)
+for name, module in model.named_modules():
 
-        if obj is None:
-            print(attr, "= None")
-        else:
-            print(
-                attr,
-                "| type =", type(obj),
-                "| shape =", getattr(obj, "shape", None),
-                "| dtype =", getattr(obj, "dtype", None),
-                "| device =", getattr(obj, "device", None)
-            )
-    else:
-        print(attr, "= ABSENT")
+    # Chercher weight
+    if hasattr(module, "weight") and module.weight is not None:
+        try:
+            dtype = module.weight.dtype
+
+            if "float8" in str(dtype):
+                fp8_found.append(
+                    (name, type(module).__name__,
+                     tuple(module.weight.shape), dtype)
+                )
+
+            elif dtype == torch.bfloat16:
+                bf16_found.append(name)
+
+        except Exception:
+            pass
+
+    # Chercher les scales FP8
+    for attr in [
+        "weight_scale",
+        "weight_scale_inv",
+        "input_scale",
+        "input_scale_inv"
+    ]:
+        if hasattr(module, attr):
+            obj = getattr(module, attr)
+
+            if obj is not None:
+                scale_found.append(
+                    (
+                        name,
+                        attr,
+                        getattr(obj, "shape", None),
+                        getattr(obj, "dtype", None)
+                    )
+                )
 
 
-print("\n=== STATE_DICT ===")
+print("\n==============================")
+print("POIDS FP8 TROUVES :", len(fp8_found))
+print("==============================")
 
-for name, tensor in layer.state_dict().items():
-    print(
-        name,
-        "| shape =", tuple(tensor.shape),
-        "| dtype =", tensor.dtype,
-        "| device =", tensor.device
-    )
+for x in fp8_found[:30]:
+    print(x)
 
 
-print("\n=== POIDS ===")
+print("\n==============================")
+print("SCALES FP8 TROUVEES :", len(scale_found))
+print("==============================")
 
-w = layer.weight
+for x in scale_found[:30]:
+    print(x)
 
-print("weight dtype :", w.dtype)
-print("weight shape :", tuple(w.shape))
-print("weight device:", w.device)
-print("is_floating_point :", w.is_floating_point())
 
-print("\n=== CONFIG QUANTIZATION ===")
+print("\n==============================")
+print("MODULES BF16 :", len(bf16_found))
+print("==============================")
 
-qc = getattr(model.config, "quantization_config", None)
 
-print("quantization_config :", qc)
-
-if qc is not None:
-    try:
-        print(qc.to_dict())
-    except:
-        print(vars(qc))
+if len(fp8_found) == 0:
+    print("ATTENTION : aucun weight float8 trouvé dans le modèle chargé.")
+else:
+    print("OK : le modèle contient réellement des poids FP8.")
