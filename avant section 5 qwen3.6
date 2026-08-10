@@ -222,3 +222,78 @@ response = processor.batch_decode(
 )[0]
 
 print("REPONSE :", repr(response))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TEST TEXTE PUR - QWEN3.6-27B-FP8
+# A exécuter APRES le patch FP8 et APRES le chargement du modèle
+
+from transformers import AutoProcessor
+import torch
+
+processor = AutoProcessor.from_pretrained(
+    str(MODEL_PATH),
+    local_files_only=True,
+    trust_remote_code=True
+)
+
+messages = [
+    {
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "Réponds uniquement par : BONJOUR OMAR"
+            }
+        ]
+    }
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+
+inputs = {
+    k: v.to(model.device) if hasattr(v, "to") else v
+    for k, v in inputs.items()
+}
+
+print("Tokens entrée :", inputs["input_ids"].shape[-1])
+
+with torch.inference_mode():
+    outputs = model.generate(
+        **inputs,
+        max_new_tokens=30,
+        do_sample=False
+    )
+
+generated = outputs[:, inputs["input_ids"].shape[-1]:]
+
+response = processor.batch_decode(
+    generated,
+    skip_special_tokens=True
+)[0]
+
+print("\n==============================")
+print("REPONSE QWEN3.6 TEXTE")
+print("==============================")
+print(response)
+print("==============================")
