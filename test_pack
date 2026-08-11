@@ -1,0 +1,2 @@
+  pip install --no-index --find-links=/chemin/vers/wheels causal-conv1d                                                                                                                                     
+  pip install --no-index --find-links=/chemin/vers/wheels flash-linear-attention
