@@ -1,11 +1,14 @@
 # --- DEBUG thinking leak ---
 raw_text = processor.decode(
     generated,
-    skip_special_tokens=False,  # on garde TOUS les tokens spéciaux
+    skip_special_tokens=False,
     clean_up_tokenization_spaces=False,
 )
 if "<think>" in raw_text:
     think_content = raw_text.split("<think>")[1].split("</think>")[0]
+    think_tokens = len(processor.tokenizer.encode(think_content))
     print(f"⚠️  THINKING LEAK : {len(think_content)} chars, "
-          f"{len(processor.tokenizer.encode(think_content))} tokens gaspillés")
+          f"{think_tokens} tokens gaspillés sur {len(generated)} générés")
+else:
+    print(f"✅ Pas de thinking détecté ({len(generated)} tokens générés)")
 # --- FIN DEBUG ---
