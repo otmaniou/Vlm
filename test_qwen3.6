@@ -1,0 +1,11 @@
+# --- DEBUG thinking leak ---
+raw_text = processor.decode(
+    generated,
+    skip_special_tokens=False,  # on garde TOUS les tokens spéciaux
+    clean_up_tokenization_spaces=False,
+)
+if "<think>" in raw_text:
+    think_content = raw_text.split("<think>")[1].split("</think>")[0]
+    print(f"⚠️  THINKING LEAK : {len(think_content)} chars, "
+          f"{len(processor.tokenizer.encode(think_content))} tokens gaspillés")
+# --- FIN DEBUG ---
