@@ -1,0 +1,52 @@
+def norm_periode(v) -> str:
+    # Conserver exactement la période lue par Qwen
+    if v is None:
+        return None
+
+    s = str(v).strip()
+
+    if not s or s.lower() in ('null', 'none', 'n/a'):
+        return None
+
+    return s
+
+
+def extract_periode_parts(periode):
+    mois = None
+    annee = None
+    tranche = None
+    complement = None
+
+    if not periode:
+        return mois, annee, tranche, complement
+
+    s = str(periode).upper()
+
+    # Mois
+    m = re.search(
+        r'\b(JANVIER|JANV|JAN|FEVRIER|FÉVRIER|FEV|FÉV|MARS|'
+        r'AVRIL|AVR|MAI|JUIN|JUILLET|JUIL|AOUT|AOÛT|'
+        r'SEPTEMBRE|SEPT|SEP|OCTOBRE|OCT|NOVEMBRE|NOV|'
+        r'DECEMBRE|DÉCEMBRE|DEC|DÉC)\b',
+        s
+    )
+    if m:
+        mois = m.group(1)
+
+    # Année
+    m = re.search(r'(?<!\d)(20\d{2}|\d{2})(?!\d)', s)
+    if m:
+        annee = m.group(1)
+
+    # Tranche
+    if re.search(r'\b(P\s*1|PART\s*1|PARTIE\s*1)\b', s):
+        tranche = 'P1'
+    elif re.search(r'\b(P\s*2|PART\s*2|PARTIE\s*2)\b', s):
+        tranche = 'P2'
+
+    # Complément
+    m = re.search(r'\b(COMPLEMENT|COMPLÉMENT|COMP|COM)\b', s)
+    if m:
+        complement = m.group(1)
+
+    return mois, annee, tranche, complement
