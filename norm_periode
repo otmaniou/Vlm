@@ -50,3 +50,30 @@ def extract_periode_parts(periode):
         complement = m.group(1)
 
     return mois, annee, tranche, complement
+
+
+
+
+
+
+
+
+
+
+
+
+d['periode'] = norm_periode(d.get('periode'))
+
+# Lire automatiquement mois / année / tranche / complément
+# à partir de la période complète
+mois_auto, annee_auto, tranche_auto, complement_auto = extract_periode_parts(
+    d.get('periode')
+)
+
+d['mois'] = norm_str(d.get('mois')) or mois_auto
+d['annee'] = norm_str(d.get('annee')) or annee_auto
+d['tranche'] = norm_str(d.get('tranche')) or tranche_auto
+d['complement_ov'] = (
+    norm_str(d.get('complement_ov') or d.get('complement'))
+    or complement_auto
+)
